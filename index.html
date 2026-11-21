@@ -32,6 +32,18 @@
         and turning ideas into simple, useful applications. This portfolio is my
         starting point and will grow with each assignment.
       </p>
+
+      <form id="visitor-form" class="visitor-form">
+        <label for="visitor-name">What should I call you?</label>
+        <div class="inline-row">
+          <input type="text" id="visitor-name" maxlength="30" autocomplete="given-name" placeholder="Your first name">
+          <button type="submit">Save</button>
+        </div>
+      </form>
+      <p id="visitor-welcome" class="visitor-welcome" hidden>
+        <span id="visitor-text" role="status"></span>
+        <button type="button" id="visitor-forget" class="link-btn">Not you?</button>
+      </p>
     </section>
 
     <section id="skills" class="section">

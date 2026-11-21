@@ -1,47 +1,126 @@
-// Greeting by time of day
-const greeting = document.getElementById("greeting");
-const hour = new Date().getHours();
-let timeGreeting = "Good evening";
-if (hour < 12) {
-  timeGreeting = "Good morning";
-} else if (hour < 18) {
-  timeGreeting = "Good afternoon";
-}
-greeting.textContent = timeGreeting + ", I'm Abdulaziz";
+// ---------------------------------------------------------------------------
+// 1. Application state
+// Everything the page has to remember lives in one object. The only way to
+// change it is setState(), which saves it and then redraws the page, so the
+// screen can never show something different from the state.
+// ---------------------------------------------------------------------------
+const STORAGE_KEY = "portfolio-state-v1";
 
-// Dark/light theme toggle (remembered in localStorage)
-const toggle = document.getElementById("theme-toggle");
+// Only these keys are written to localStorage. The rest resets on reload.
+const SAVED_KEYS = ["theme", "visitorName"];
 
-function applyTheme(theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-  toggle.textContent = theme === "dark" ? "Light" : "Dark";
-}
+const state = {
+  theme: null, // "dark", "light", or null = follow the operating system
+  visitorName: "", // "" = the visitor has not introduced themselves
+  welcomeWord: "Welcome back" // changes to "Nice to meet you" right after saving a name
+};
 
 // localStorage can throw when the browser blocks storage, so the page keeps working without it
-function getSavedTheme() {
+function loadSavedState() {
   try {
-    return localStorage.getItem("theme");
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    SAVED_KEYS.forEach(function (key) {
+      if (key in saved) {
+        state[key] = saved[key];
+      }
+    });
   } catch (error) {
-    return null;
+    // Nothing saved, or the saved text is not valid JSON: keep the defaults
   }
 }
 
-function saveTheme(theme) {
+function saveState() {
+  const toSave = {};
+  SAVED_KEYS.forEach(function (key) {
+    toSave[key] = state[key];
+  });
   try {
-    localStorage.setItem("theme", theme);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   } catch (error) {
-    // Storage is blocked: the theme still changes, it just isn't remembered
+    // Storage is blocked: the change still shows, it just isn't remembered
   }
 }
+
+// Merge the changes into the state, remember them, and redraw
+function setState(changes) {
+  Object.assign(state, changes);
+  saveState();
+  render();
+}
+
+// Redraw every part of the page that depends on the state
+function render() {
+  renderTheme();
+  renderVisitor();
+}
+
+// ---------------------------------------------------------------------------
+// 2. Theme (dark/light)
+// ---------------------------------------------------------------------------
+const themeToggle = document.getElementById("theme-toggle");
+const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
 
 // No saved choice yet? Follow the operating system setting.
-const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-applyTheme(getSavedTheme() || (prefersDark ? "dark" : "light"));
+function currentTheme() {
+  return state.theme || (prefersDark.matches ? "dark" : "light");
+}
 
-toggle.addEventListener("click", function () {
-  const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-  saveTheme(next);
-  applyTheme(next);
+function renderTheme() {
+  const theme = currentTheme();
+  document.documentElement.setAttribute("data-theme", theme);
+  themeToggle.textContent = theme === "dark" ? "Light" : "Dark";
+}
+
+themeToggle.addEventListener("click", function () {
+  setState({ theme: currentTheme() === "dark" ? "light" : "dark" });
+});
+
+// ---------------------------------------------------------------------------
+// 3. Greeting and visitor name
+// ---------------------------------------------------------------------------
+const greeting = document.getElementById("greeting");
+const visitorForm = document.getElementById("visitor-form");
+const visitorInput = document.getElementById("visitor-name");
+const visitorWelcome = document.getElementById("visitor-welcome");
+const visitorText = document.getElementById("visitor-text");
+const visitorForget = document.getElementById("visitor-forget");
+
+// Greeting by time of day
+function timeGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) {
+    return "Good morning";
+  }
+  if (hour < 18) {
+    return "Good afternoon";
+  }
+  return "Good evening";
+}
+
+greeting.textContent = timeGreeting() + ", I'm Abdulaziz";
+
+// Known visitor: show the welcome line. Unknown visitor: show the name form.
+function renderVisitor() {
+  const known = state.visitorName !== "";
+  visitorForm.hidden = known;
+  visitorWelcome.hidden = !known;
+  visitorText.textContent = known ? state.welcomeWord + ", " + state.visitorName + "!" : "";
+}
+
+visitorForm.addEventListener("submit", function (event) {
+  event.preventDefault();
+  const name = visitorInput.value.trim();
+  if (name === "") {
+    visitorInput.focus();
+    return;
+  }
+  setState({ visitorName: name, welcomeWord: "Nice to meet you" });
+});
+
+visitorForget.addEventListener("click", function () {
+  visitorInput.value = "";
+  setState({ visitorName: "", welcomeWord: "Welcome back" });
+  visitorInput.focus();
 });
 
 // Project filter buttons + live search
@@ -225,3 +304,9 @@ if ("IntersectionObserver" in window) {
     observer.observe(section);
   });
 }
+
+// ---------------------------------------------------------------------------
+// Start: read what was saved on the last visit, then draw the page once
+// ---------------------------------------------------------------------------
+loadSavedState();
+render();

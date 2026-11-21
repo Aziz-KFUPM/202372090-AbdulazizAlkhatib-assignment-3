@@ -150,6 +150,37 @@ main {
   color: var(--accent);
 }
 
+/* Visitor name form and welcome line */
+.inline-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.inline-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.visitor-form {
+  margin-top: 1.5rem;
+  max-width: 400px;
+}
+
+.visitor-welcome {
+  margin-top: 1.5rem;
+  font-weight: bold;
+}
+
+/* A button that looks like a link, for small secondary actions */
+.link-btn {
+  background: none;
+  color: var(--accent);
+  padding: 0 0.25rem;
+  font-weight: normal;
+  text-decoration: underline;
+}
+
 .skills {
   display: flex;
   flex-wrap: wrap;
