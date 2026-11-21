@@ -68,35 +68,66 @@
           <button type="button" class="filter-btn" data-filter="design" aria-pressed="false">Design</button>
           <button type="button" class="filter-btn" data-filter="tools" aria-pressed="false">Tools</button>
         </div>
+        <div class="selects">
+          <div>
+            <label for="project-level">Your level</label>
+            <select id="project-level">
+              <option value="all">All levels</option>
+              <option value="beginner">Beginner</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+          <div>
+            <label for="project-sort">Sort by</label>
+            <select id="project-sort">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="name">Name (A to Z)</option>
+            </select>
+          </div>
+        </div>
+        <p id="level-message" class="level-message" hidden></p>
+        <p class="projects-summary">
+          <span id="projects-count" role="status"></span>
+          <button type="button" id="projects-reset" class="link-btn" hidden>Reset filters</button>
+        </p>
       </div>
 
       <div class="projects">
-        <article class="card" data-category="web">
+        <article class="card" data-category="web" data-level="beginner" data-date="2026-02-10">
           <img src="assets/images/project1.svg" alt="Placeholder for Project One" width="600" height="300" loading="lazy">
           <span class="tag">Web</span>
+          <span class="tag">Beginner</span>
           <h3>Project One</h3>
           <p>A short description of my first project, built with HTML, CSS and JavaScript.</p>
+          <time datetime="2026-02-10">February 2026</time>
         </article>
-        <article class="card" data-category="design">
+        <article class="card" data-category="design" data-level="beginner" data-date="2026-05-18">
           <img src="assets/images/project2.svg" alt="Placeholder for Project Two" width="600" height="300" loading="lazy">
           <span class="tag">Design</span>
+          <span class="tag">Beginner</span>
           <h3>Project Two</h3>
           <p>A short description of my second project, focused on responsive design.</p>
+          <time datetime="2026-05-18">May 2026</time>
         </article>
-        <article class="card" data-category="tools">
+        <article class="card" data-category="tools" data-level="advanced" data-date="2026-09-02">
           <img src="assets/images/project3.svg" alt="Placeholder for Project Three" width="600" height="300" loading="lazy">
           <span class="tag">Tools</span>
+          <span class="tag">Advanced</span>
           <h3>Project Three</h3>
           <p>A short description of a small tool or script, for example one written in Python.</p>
+          <time datetime="2026-09-02">September 2026</time>
         </article>
-        <article class="card" data-category="web">
+        <article class="card" data-category="web" data-level="advanced" data-date="2026-10-20">
           <img src="assets/images/project4.svg" alt="Placeholder for Project Four" width="600" height="300" loading="lazy">
           <span class="tag">Web</span>
+          <span class="tag">Advanced</span>
           <h3>Project Four</h3>
           <p>A short description of a web app that uses JavaScript and a public API.</p>
+          <time datetime="2026-10-20">October 2026</time>
         </article>
       </div>
-      <p id="projects-empty" class="empty" hidden>No projects found. Try another word or click "All".</p>
+      <p id="projects-empty" class="empty" hidden>No projects found. Try another word or click "Reset filters".</p>
     </section>
 
     <section id="repos" class="section">

@@ -28,6 +28,11 @@
   box-sizing: border-box;
 }
 
+/* Rules like "display: flex" would otherwise win over the hidden attribute */
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -49,6 +54,7 @@ body,
 .site-header,
 .repo,
 input,
+select,
 textarea {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -57,6 +63,7 @@ textarea {
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -262,6 +269,34 @@ main {
   color: var(--on-accent);
 }
 
+.selects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.selects label {
+  display: block;
+}
+
+.level-message {
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  background: var(--card);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+}
+
+.projects-summary {
+  margin: 0;
+  color: var(--muted);
+}
+
+.card time {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .empty {
   text-align: center;
   color: var(--muted);
@@ -342,6 +377,7 @@ form {
 }
 
 input,
+select,
 textarea {
   padding: 0.6rem;
   font: inherit;

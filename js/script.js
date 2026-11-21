@@ -7,12 +7,16 @@
 const STORAGE_KEY = "portfolio-state-v1";
 
 // Only these keys are written to localStorage. The rest resets on reload.
-const SAVED_KEYS = ["theme", "visitorName"];
+const SAVED_KEYS = ["theme", "visitorName", "category", "level", "sort"];
 
 const state = {
   theme: null, // "dark", "light", or null = follow the operating system
   visitorName: "", // "" = the visitor has not introduced themselves
-  welcomeWord: "Welcome back" // changes to "Nice to meet you" right after saving a name
+  welcomeWord: "Welcome back", // changes to "Nice to meet you" right after saving a name
+  category: "all", // project filter: "all", "web", "design" or "tools"
+  level: "all", // project filter: "all", "beginner" or "advanced"
+  sort: "newest", // project order: "newest", "oldest" or "name"
+  query: "" // project search text (not saved)
 };
 
 // localStorage can throw when the browser blocks storage, so the page keeps working without it
@@ -26,6 +30,29 @@ function loadSavedState() {
     });
   } catch (error) {
     // Nothing saved, or the saved text is not valid JSON: keep the defaults
+  }
+}
+
+// A saved value that the page no longer offers (or that someone edited by
+// hand) falls back to the default instead of breaking the project list
+function checkSavedChoices() {
+  if (!(state.sort in SORTERS)) {
+    state.sort = "newest";
+  }
+  if (!(state.level in LEVEL_MESSAGES)) {
+    state.level = "all";
+  }
+  const categories = Array.from(filterButtons).map(function (button) {
+    return button.dataset.filter;
+  });
+  if (!categories.includes(state.category)) {
+    state.category = "all";
+  }
+  if (typeof state.visitorName !== "string") {
+    state.visitorName = "";
+  }
+  if (state.theme !== "dark" && state.theme !== "light") {
+    state.theme = null;
   }
 }
 
@@ -52,6 +79,7 @@ function setState(changes) {
 function render() {
   renderTheme();
   renderVisitor();
+  renderProjects();
 }
 
 // ---------------------------------------------------------------------------
@@ -123,41 +151,121 @@ visitorForget.addEventListener("click", function () {
   visitorInput.focus();
 });
 
-// Project filter buttons + live search
+// ---------------------------------------------------------------------------
+// 4. Projects: search + category + level + sort, all combined
+// ---------------------------------------------------------------------------
 const searchInput = document.getElementById("project-search");
 const filterButtons = document.querySelectorAll(".filter-btn");
-const projectCards = document.querySelectorAll(".projects .card");
+const levelSelect = document.getElementById("project-level");
+const sortSelect = document.getElementById("project-sort");
+const resetButton = document.getElementById("projects-reset");
+const projectsGrid = document.querySelector(".projects");
+const projectCards = Array.from(projectsGrid.querySelectorAll(".card"));
+const projectsCount = document.getElementById("projects-count");
 const projectsEmpty = document.getElementById("projects-empty");
-let activeFilter = "all";
+const levelMessage = document.getElementById("level-message");
 
-// Show only the cards that match both the active filter and the search text
-function updateProjects() {
-  const query = searchInput.value.trim().toLowerCase();
+const LEVEL_MESSAGES = {
+  all: "",
+  beginner: "New to coding? These projects use only the basics: HTML, CSS and a little JavaScript.",
+  advanced: "Looking for a challenge? These projects work with APIs, saved state and more complex logic."
+};
+
+// Each sort option is a compare function for Array.sort()
+const SORTERS = {
+  newest: function (a, b) {
+    return b.dataset.date.localeCompare(a.dataset.date);
+  },
+  oldest: function (a, b) {
+    return a.dataset.date.localeCompare(b.dataset.date);
+  },
+  name: function (a, b) {
+    return cardTitle(a).localeCompare(cardTitle(b));
+  }
+};
+
+let appliedSort = null; // the order the cards are in right now
+
+function cardTitle(card) {
+  return card.querySelector("h3").textContent;
+}
+
+// Wait until the visitor stops typing before running fn, so it doesn't run on every key
+function debounce(fn, delay) {
+  let timer;
+  return function () {
+    clearTimeout(timer);
+    timer = setTimeout(fn, delay);
+  };
+}
+
+function renderProjects() {
+  // Step 1: put the cards in the chosen order (only when the order changed,
+  // because moving a card replays its fade-in animation)
+  if (appliedSort !== state.sort) {
+    const sorted = projectCards.slice().sort(SORTERS[state.sort]);
+    const fragment = document.createDocumentFragment();
+    sorted.forEach(function (card) {
+      fragment.appendChild(card);
+    });
+    projectsGrid.appendChild(fragment);
+    appliedSort = state.sort;
+  }
+
+  // Step 2: a card is shown only if it passes all three checks
+  const query = state.query.trim().toLowerCase();
   let visibleCount = 0;
 
   projectCards.forEach(function (card) {
-    const matchesFilter = activeFilter === "all" || card.dataset.category === activeFilter;
+    const matchesCategory = state.category === "all" || card.dataset.category === state.category;
+    const matchesLevel = state.level === "all" || card.dataset.level === state.level;
     const matchesSearch = card.textContent.toLowerCase().includes(query);
-    card.hidden = !(matchesFilter && matchesSearch);
+    card.hidden = !(matchesCategory && matchesLevel && matchesSearch);
     if (!card.hidden) {
       visibleCount++;
     }
   });
 
-  projectsEmpty.hidden = visibleCount > 0; 
+  // Step 3: make the controls and messages match the state
+  filterButtons.forEach(function (button) {
+    button.setAttribute("aria-pressed", button.dataset.filter === state.category ? "true" : "false");
+  });
+  levelSelect.value = state.level;
+  sortSelect.value = state.sort;
+
+  levelMessage.textContent = LEVEL_MESSAGES[state.level];
+  levelMessage.hidden = state.level === "all";
+
+  projectsCount.textContent = "Showing " + visibleCount + " of " + projectCards.length + " projects.";
+  projectsEmpty.hidden = visibleCount > 0;
+
+  // The reset button only appears when there is something to reset
+  const filtered = state.category !== "all" || state.level !== "all" || query !== "";
+  resetButton.hidden = !filtered;
 }
 
 filterButtons.forEach(function (button) {
   button.addEventListener("click", function () {
-    activeFilter = button.dataset.filter;
-    filterButtons.forEach(function (other) {
-      other.setAttribute("aria-pressed", other === button ? "true" : "false");
-    });
-    updateProjects();
+    setState({ category: button.dataset.filter });
   });
 });
 
-searchInput.addEventListener("input", updateProjects);
+levelSelect.addEventListener("change", function () {
+  setState({ level: levelSelect.value });
+});
+
+sortSelect.addEventListener("change", function () {
+  setState({ sort: sortSelect.value });
+});
+
+searchInput.addEventListener("input", debounce(function () {
+  setState({ query: searchInput.value });
+}, 200));
+
+resetButton.addEventListener("click", function () {
+  searchInput.value = "";
+  setState({ category: "all", level: "all", query: "" });
+});
 
 // Latest GitHub repositories (public API)
 const reposStatus = document.getElementById("repos-status");
@@ -309,4 +417,5 @@ if ("IntersectionObserver" in window) {
 // Start: read what was saved on the last visit, then draw the page once
 // ---------------------------------------------------------------------------
 loadSavedState();
+checkSavedChoices();
 render();
