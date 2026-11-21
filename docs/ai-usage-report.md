@@ -3,7 +3,6 @@
 **Student:** Abdulaziz Alkhatib (202372090)
 **Course:** SWE 363 – Assignment 3: Advanced Functionality
 
-> **Before submitting:** the lines marked `TODO (Abdulaziz)` are mine to write, in my own words. Delete this note when they are done.
 
 ## 1. Tools used and use cases
 
@@ -25,9 +24,9 @@ The starting code from Assignment 2 was also AI-assisted. That use is declared i
 
 | ID | Tool (model) | Date | Purpose | Files affected | What you changed and how you verified it |
 |----|--------------|------|---------|----------------|------------------------------------------|
-| C01 | Claude Code (Claude Fable 5.2) | 2026-11-21 | Copy Assignment 2, implement all Assignment 3 features, test them, explain them, draft the documentation | `index.html`, `css/styles.css`, `js/script.js`, `README.md`, `docs/*` | TODO (Abdulaziz): what I asked about, what I changed, and how I checked it myself |
-| A01 | Claude Code (Claude Fable 5.2) | 2026-11-21 | The AI-generated code and docs before my edits (`artifacts/A01-ai-generated.patch`): every commit on branch `feature/advanced-functionality` after `c34f1aa` | Same as C01 | TODO (Abdulaziz): my edits after this patch, or "no changes" with the reason |
-| A02 | Claude Code (Claude Fable 5.2) | 2026-11-21 | Browser test scripts (Puppeteer) and screenshots (`artifacts/A02-tests/`) | None (kept outside the repository) | The AI ran them: 56 of 56 checks passed. TODO (Abdulaziz): what I tested by hand |
+| C01 | Claude Code (Claude Fable 5.2) | 2026-11-21 | Copy Assignment 2, implement all Assignment 3 features, test them, explain them, draft the documentation | `index.html`, `css/styles.css`, `js/script.js`, `README.md`, `docs/*` | I checked the code and that it is working and asked about what i did not understand |
+| A01 | Claude Code (Claude Fable 5.2) | 2026-11-21 | The AI-generated code and docs before my edits (`artifacts/A01-ai-generated.patch`): every commit on branch `feature/advanced-functionality` after `c34f1aa` | Same as C01 | I checked the code and that it is working and asked about what i did not understand |
+| A02 | Claude Code (Claude Fable 5.2) | 2026-11-21 | Browser test scripts (Puppeteer) and screenshots (`artifacts/A02-tests/`) | None (kept outside the repository) | The AI ran them: 56 of 56 checks passed. I tested manually the functionality.
 
 Each commit with AI-assisted code ends with `Assisted-by: Claude Code (Claude Fable 5.2)`.
 
@@ -53,25 +52,21 @@ The full list is in `technical-documentation.md`, section 7.
 
 **By me:**
 
-- TODO (Abdulaziz): what I opened, clicked and checked myself, and in which browsers
-
+- Read the code and verfied the functionality and that the code is proper
 **Problem found during testing:** the first version hid the name form with the `hidden` attribute, but the stylesheet's `form { display: flex }` rule would have kept it visible. The AI noticed this while reviewing its own code and added a `[hidden] { display: none !important; }` rule before the first test run.
 
 ## 4. Responsible use and modifications
 
-- TODO (Abdulaziz): which parts of the AI output I reviewed, what I changed or rejected, and why
-- TODO (Abdulaziz): how I made sure I understand the code (for example, the questions I asked in C01)
+- I read the code and the parts of it the were vague or unclear, but in general the code is written in plain js so it is clear
 
 ## 5. Benefits and challenges
 
-- TODO (Abdulaziz): how the AI helped
-- TODO (Abdulaziz): difficulties or limits I ran into
+- i learnt that i can write directly to local storage for something like redis.
 
 One limit worth recording: I asked for the state management "in React", but the project is plain JavaScript and the assignment asks for `index.html`, `css/` and `js/`. The AI kept plain JavaScript and built a small store that works like React state (`state` → `setState()` → `render()`).
 
 ## 6. Learning outcomes
 
-- TODO (Abdulaziz): what I learned, in my own words
 
 Topics this assignment covered, as a starting list:
 
@@ -95,4 +90,4 @@ The AI Evidence ZIP `202372090-AbdulazizAlkhatib-assignment3-ai-evidence.zip` is
 
 **Name:** Abdulaziz Alkhatib
 **ID:** 202372090
-**Date:** TODO (Abdulaziz): the date I submit
+**Date:** 21-11-2026
