@@ -267,13 +267,18 @@ resetButton.addEventListener("click", function () {
   setState({ category: "all", level: "all", query: "" });
 });
 
-// Latest GitHub repositories (public API)
+// ---------------------------------------------------------------------------
+// 5. Latest GitHub repositories (public API)
+// ---------------------------------------------------------------------------
 const reposStatus = document.getElementById("repos-status");
 const reposList = document.getElementById("repos-list");
 const reposRetry = document.getElementById("repos-retry");
-const reposUrl = "https://api.github.com/users/Aziz-KFUPM/repos?sort=updated&per_page=6";
+const REPOS_URL = "https://api.github.com/users/Aziz-KFUPM/repos?sort=updated&per_page=6";
+const REPOS_CACHE_KEY = "repos-cache-v1";
+const REPOS_CACHE_MINUTES = 10;
+const REPOS_TIMEOUT_MS = 8000;
 
-function showReposMessage(text, type) { // this function is used to show a message
+function showReposMessage(text, type) {
   reposStatus.textContent = text;
   reposStatus.className = type;
 }
@@ -292,48 +297,122 @@ function createRepoItem(repo) {
   const description = document.createElement("p");
   description.textContent = repo.description || "No description yet.";
 
+  // Only mention the language and the stars when the repository has them
   const details = document.createElement("small");
-  const updated = new Date(repo.updated_at).toLocaleDateString();
-  details.textContent = (repo.language ? repo.language + " · " : "") + "Updated " + updated;
+  const parts = [];
+  if (repo.language) {
+    parts.push(repo.language);
+  }
+  if (repo.stargazers_count > 0) {
+    parts.push("★ " + repo.stargazers_count);
+  }
+  parts.push("Updated " + new Date(repo.updated_at).toLocaleDateString());
+  details.textContent = parts.join(" · ");
 
   item.append(link, description, details);
   return item;
 }
 
-async function loadRepos() {
-  showReposMessage("Loading repositories...", "loading");
-  reposRetry.hidden = true;
-  reposList.textContent = "";
+// The list is kept in sessionStorage for a few minutes, so reloading the page
+// doesn't ask GitHub again (faster, and it saves the 60 requests/hour limit)
+function readReposCache() {
+  try {
+    const cache = JSON.parse(sessionStorage.getItem(REPOS_CACHE_KEY));
+    const ageMinutes = (Date.now() - cache.savedAt) / 60000;
+    return ageMinutes < REPOS_CACHE_MINUTES && Array.isArray(cache.repos) ? cache.repos : null;
+  } catch (error) {
+    return null; // nothing cached, or storage is blocked
+  }
+}
+
+function writeReposCache(repos) {
+  // Keep only the fields the page shows, not GitHub's whole answer
+  const small = repos.map(function (repo) {
+    return {
+      name: repo.name,
+      html_url: repo.html_url,
+      description: repo.description,
+      language: repo.language,
+      stargazers_count: repo.stargazers_count,
+      updated_at: repo.updated_at
+    };
+  });
+  try {
+    sessionStorage.setItem(REPOS_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), repos: small }));
+  } catch (error) {
+    // Storage is blocked: the next page load simply asks GitHub again
+  }
+}
+
+async function fetchRepos() {
+  // Give up after a few seconds instead of leaving the spinner on forever
+  const controller = new AbortController();
+  const timeout = setTimeout(function () {
+    controller.abort();
+  }, REPOS_TIMEOUT_MS);
 
   try {
-    const response = await fetch(reposUrl);
+    const response = await fetch(REPOS_URL, { signal: controller.signal });
     if (!response.ok) {
       throw new Error("HTTP " + response.status);
     }
-    const repos = await response.json();
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
-    if (repos.length === 0) {
-      showReposMessage("No public repositories yet. Check back soon!", "");
-      return;
-    }
+function showRepos(repos) {
+  if (repos.length === 0) {
+    showReposMessage("No public repositories yet. Check back soon!", "");
+    return;
+  }
+  // Build the whole list off-screen and add it to the page in one step
+  const fragment = document.createDocumentFragment();
+  repos.forEach(function (repo) {
+    fragment.appendChild(createRepoItem(repo));
+  });
+  reposList.appendChild(fragment);
+  showReposMessage("", "");
+}
 
-    repos.forEach(function (repo) {
-      reposList.appendChild(createRepoItem(repo));
-    });
-    showReposMessage("", "");
+// Pick the friendly message that matches what went wrong
+function reposErrorMessage(error) {
+  if (error.message === "HTTP 403" || error.message === "HTTP 429") {
+    // GitHub's hourly limit for visitors without a login was reached
+    return "GitHub's request limit was reached. Wait a few minutes";
+  }
+  if (error.name === "AbortError") {
+    return "GitHub took too long to answer";
+  }
+  if (error.message.startsWith("HTTP ")) {
+    return "GitHub couldn't answer right now";
+  }
+  return "Couldn't load repositories right now. Check your internet connection";
+}
+
+async function loadRepos() {
+  reposRetry.hidden = true;
+  reposList.textContent = "";
+
+  const cached = readReposCache();
+  if (cached) {
+    showRepos(cached);
+    return;
+  }
+
+  showReposMessage("Loading repositories...", "loading");
+  try {
+    const repos = await fetchRepos();
+    writeReposCache(repos);
+    showRepos(repos);
   } catch (error) {
-    // 403/429 mean GitHub's hourly limit for visitors without a login was reached
-    const limited = error.message === "HTTP 403" || error.message === "HTTP 429";
-    const reason = limited
-      ? "GitHub's request limit was reached. Wait a few minutes"
-      : "Couldn't load repositories right now. Check your internet connection";
-    showReposMessage(reason + ", then click Try again.", "error");
+    showReposMessage(reposErrorMessage(error) + ", then click Try again.", "error");
     reposRetry.hidden = false;
   }
 }
 
 reposRetry.addEventListener("click", loadRepos);
-loadRepos();
 
 // Contact form validation (no backend)
 const form = document.getElementById("contact-form");
@@ -419,3 +498,4 @@ if ("IntersectionObserver" in window) {
 loadSavedState();
 checkSavedChoices();
 render();
+loadRepos();
