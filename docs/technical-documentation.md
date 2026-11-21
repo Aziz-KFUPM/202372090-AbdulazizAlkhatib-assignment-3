@@ -1,277 +1,212 @@
-# Technical Documentation
+# Technical Documentation – Assignment 3
+
+Portfolio website of Abdulaziz Alkhatib (202372090), SWE 363.
 
 ## 1. Overview
 
-The portfolio is a static single-page site with no frameworks, libraries, build step or backend. It has three source files:
+The site is one HTML page, one stylesheet and one script. There are no frameworks, libraries or build steps.
 
-| File | Lines | Role |
-|---|---|---|
-| `index.html` | 125 | Page structure: header/nav, About, Skills, Projects, Latest on GitHub, Contact, footer |
-| `css/styles.css` | 401 | Theme variables, layout, animations, responsive and reduced-motion rules |
-| `js/script.js` | 227 | Greeting, theme, project filter/search, GitHub API, form validation, scroll fade-in |
-
-All files together, including images, come to about 44 KB. Every section uses the class `section`, which handles spacing, the scroll fade-in and the space it leaves for the sticky header.
-
-The script is loaded at the end of `<body>`, so every element already exists when it runs.
-
-## 2. JavaScript features
-
-The sections below follow the order of `js/script.js`.
-
-### 2.1 Greeting (from Assignment 1, unchanged)
-
-The script reads `new Date().getHours()` and writes "Good morning", "Good afternoon" or "Good evening" into `#greeting`.
-
-### 2.2 Dark/light theme
-
-| Function | What it does |
+| File | Role |
 |---|---|
-| `applyTheme(theme)` | Sets `data-theme` on `<html>` and updates the button label |
-| `getSavedTheme()` | Reads `localStorage`. Returns `null` if storage is blocked |
-| `saveTheme(theme)` | Writes to `localStorage`. Does nothing if storage is blocked |
+| `index.html` | Structure and content. Project cards carry their data in `data-` attributes |
+| `css/styles.css` | Theme colors (CSS variables), layout, animations, responsive rules |
+| `js/script.js` | All behavior, in eight numbered sections |
+| `assets/images/` | Five small SVG files (four placeholders and the favicon) |
 
-On startup the page uses the saved theme. If none is saved, it follows the operating system setting, read with `matchMedia("(prefers-color-scheme: dark)")`.
+Sections of `js/script.js`:
 
-The `localStorage` calls are wrapped in `try/catch` because some browsers throw an error when storage is blocked, for example with strict privacy settings. Without the wrapper, that error would stop the rest of the script.
+1. Application state
+2. Theme
+3. Greeting and visitor name
+4. Projects (search, category, level, sort)
+5. GitHub repositories (API)
+6. Contact form
+7. Time-on-site counter
+8. Scroll animation
 
-The CSS defines the colors as variables on `:root`, and `[data-theme="dark"]` overrides them.
+The last lines of the file start the page: load the saved state, check it, draw the page, and request the repositories.
 
-### 2.3 Project filter and live search
+## 2. State management
 
-| Element | Purpose |
-|---|---|
-| `#project-search` | Search box. The `input` event fires on every keystroke |
-| `.filter-btn[data-filter]` | Category buttons. `aria-pressed` marks the active one |
-| `.card[data-category]` | Project cards |
-| `#projects-empty` | "No projects found" message |
+### The idea
 
-The variable `activeFilter` stores the selected category. `updateProjects()` runs after every keystroke and every button click:
-
-1. It reads the search text, trimmed and lowercased.
-2. For each card it checks two conditions:
-   - **matchesFilter:** the filter is `all`, or it equals the card's `data-category`.
-   - **matchesSearch:** the card's whole text (title, tag and description) contains the search text.
-3. It sets `card.hidden = !(matchesFilter && matchesSearch)`.
-4. It shows `#projects-empty` only when no card is visible.
-
-**Adding a project:** copy an `<article class="card" data-category="...">` block in `index.html`. No JavaScript change is needed.
-
-**Adding a category:** add a button with a new `data-filter` value.
-
-### 2.4 Latest GitHub repositories (public API)
-
-**Endpoint:** `https://api.github.com/users/Aziz-KFUPM/repos?sort=updated&per_page=6`. It returns the 6 most recently updated public repositories.
-
-`loadRepos()` is an `async` function and runs once on page load:
+Everything the page has to remember lives in one object called `state`. Nothing else in the code stores a filter, a name or a theme.
 
 ```
-loadRepos()
-  ├─ show "Loading repositories..." (class "loading" adds the CSS spinner)
-  ├─ hide the Try again button and clear the list
-  ├─ await fetch(...)
-  │    ├─ response not ok  → throw Error("HTTP " + status)  → goes to catch
-  │    ├─ empty array      → "No public repositories yet. Check back soon!"
-  │    └─ repositories     → createRepoItem() for each one, then clear the status
-  └─ catch
-       ├─ HTTP 403 / 429   → rate-limit message
-       ├─ anything else    → connection message (offline, server error, ...)
-       └─ show the Try again button (clicking it calls loadRepos() again)
+visitor action  →  setState({ ... })  →  saveState()  →  render()
+                   change the object     localStorage    redraw from the object
 ```
 
-| State | Message shown | Try again button |
-|---|---|---|
-| Loading | Spinner + "Loading repositories..." | Hidden |
-| Success | Repository list | Hidden |
-| Empty | "No public repositories yet. Check back soon!" | Hidden |
-| Rate limit (403/429) | "GitHub's request limit was reached. Wait a few minutes, then click Try again." | Shown |
-| Offline / other error | "Couldn't load repositories right now. Check your internet connection, then click Try again." | Shown |
+- **`state`** holds the current values.
+- **`setState(changes)`** is the only function that changes it. It merges the changes, saves, and redraws.
+- **`render()`** calls `renderTheme()`, `renderVisitor()`, `renderProjects()` and `prefillContactName()`. Each one reads `state` and makes the page match it.
 
-**Rate limit:** without a login, GitHub allows 60 requests per hour per IP address. That is plenty for a portfolio, but repeated reloads during development can reach it. This is why the rate limit has its own message.
+Event listeners never touch the page directly. A click on **Web** only calls `setState({ category: "web" })`. Because the page is always redrawn from the state, the buttons, the cards, the count and the messages cannot disagree with each other.
 
-**Safety:** `createRepoItem()` builds each item with `createElement` and `textContent`, never `innerHTML`. Text from the API, such as a repository description, is always shown as plain text and never run as HTML. External links use `target="_blank"` with `rel="noopener"`.
+### What is in the state
 
-**Accessibility:** `#repos-status` has `role="status"`, so screen readers announce loading and error messages.
-
-### 2.5 Contact form validation
-
-The form has `novalidate`, which turns off the browser's built-in validation bubbles. The script shows its own messages instead, so they look the same in every browser.
-
-`getError(field)` returns an error message, or `""` if the value is fine:
-
-| Field | Rule (after trimming spaces) | Message |
-|---|---|---|
-| Name | At least 2 characters | "Please enter your name (at least 2 characters)." |
-| Email | Matches `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` | "Please enter a valid email, like name@example.com." |
-| Message | At least 10 characters | "Please write a message of at least 10 characters." |
-
-`showError(field, message)` writes the message into the `<small id="<field>-error">` under the field. It also sets `aria-invalid`, which the CSS uses to draw a red border. Each input points to its error element with `aria-describedby`, so screen readers read the error together with the field.
-
-**On submit:**
-
-1. The script checks all three fields.
-2. If any field is invalid:
-   - the status shows "Please fix the highlighted fields and try again."
-   - focus moves to the first invalid field.
-3. If every field is valid:
-   - the status shows "Thanks, <name>! Your message was received."
-   - the form is reset.
-
-**While typing:** one `input` listener on the whole form re-checks a field, but only if that field is already marked invalid. Errors disappear as soon as they are fixed, and nobody sees an error halfway through typing for the first time.
-
-**Replaying the animation:** `showFormStatus()` removes the class, reads `offsetWidth`, then adds the class back. Reading `offsetWidth` forces the browser to apply the removal first, so the slide-in animation plays again even when two submits in a row give the same result.
-
-### 2.6 Fade-in on scroll
-
-An `IntersectionObserver` watches every `.section`:
-
-- When a section comes within 50 px of the bottom of the screen, the observer adds `.visible`.
-- After that it stops watching the section, so each section animates only once.
-- The JavaScript adds the `.reveal` class (the hidden starting state) itself. If JavaScript is off, or the browser has no `IntersectionObserver`, all content stays visible.
-
-## 3. CSS
-
-### 3.1 Theme colors and contrast
-
-| Variable | Light | Dark | Used for |
+| Key | Values | Saved? | Used by |
 |---|---|---|---|
-| `--bg` | `#ffffff` | `#0f172a` | Page background |
-| `--text` | `#1f2933` | `#e2e8f0` | Body text |
-| `--muted` | `#52606d` | `#94a3b8` | Secondary text, tags |
-| `--accent` | `#2563eb` | `#60a5fa` | Links, buttons |
-| `--on-accent` | `#ffffff` | `#0f172a` | Text on accent buttons |
-| `--card` | `#f1f5f9` | `#1e293b` | Cards, inputs |
-| `--border` | `#cbd5e1` | `#334155` | Borders |
-| `--error` | `#b91c1c` | `#f87171` | Error text and borders |
-| `--success` | `#15803d` | `#4ade80` | Success message |
+| `theme` | `"dark"`, `"light"`, or `null` (follow the operating system) | Yes | Theme button, page colors |
+| `visitorName` | Text, or `""` when unknown | Yes | Welcome line, contact form name |
+| `category` | `"all"`, `"web"`, `"design"`, `"tools"` | Yes | Project filter buttons |
+| `level` | `"all"`, `"beginner"`, `"advanced"` | Yes | Level menu and level message |
+| `sort` | `"newest"`, `"oldest"`, `"name"` | Yes | Sort menu, card order |
+| `query` | Search text | No | Project search |
+| `welcomeWord` | `"Welcome back"` or `"Nice to meet you"` | No | Welcome line |
 
-Every text/background pair has a contrast ratio of at least 4.5:1 (WCAG AA) in both themes. The lowest pair is accent on card in light mode, at 4.7:1.
+The search text is not saved, because a returning visitor who sees a nearly empty project list would not know why. `welcomeWord` is not saved because it describes this visit only.
 
-`--on-accent` is new in Assignment 2. In Assignment 1, button text was always white, which gave only 2.5:1 on the light-blue dark-mode accent.
+### Saving and loading
 
-### 3.2 Animations and transitions
+- The saved keys are listed in `SAVED_KEYS` and written as one JSON text under the `localStorage` key `portfolio-state-v1`.
+- `loadSavedState()` runs once at start and copies the saved keys into `state`.
+- `checkSavedChoices()` then replaces any value the page does not offer (for example a sort order that was removed, or text edited by hand) with its default.
+- Every `localStorage` call is inside `try`/`catch`. If the browser blocks storage, the site works the same; it just forgets on reload.
 
-| Effect | Technique | Selector |
+### State that is not in the store
+
+| Value | Where | Why it is separate |
 |---|---|---|
-| Card lift on hover | `transition` + `transform: translateY(-6px)` and a shadow | `.card:hover` |
-| Card fade-in, including after filtering | `@keyframes fade-in`. It replays whenever a hidden card is shown again | `.card` |
-| Section fade-in on scroll | `transition` on opacity/transform, `.reveal` → `.visible` | `.section` |
-| Form message slide-in | `@keyframes slide-in` | `#form-status.success`, `.error` |
-| Loading spinner | `@keyframes spin` on a `::before` circle | `#repos-status.loading` |
-| Theme color fade | `transition` on background-color/color | `body`, header, inputs, cards |
+| Repository list | `sessionStorage` cache | It is downloaded data, not a visitor choice |
+| `secondsOnSite` | A variable in section 7 | It changes every second and only the footer uses it. Sending it through `setState` would save and redraw the whole page each second |
+| Form field values and errors | The form elements | The browser already stores what is typed |
 
-Movement only animates `transform` and `opacity`. The browser can change these without recalculating the page layout, so the animations stay smooth on phones.
+## 3. Features
 
-**Reduced motion:** when the operating system's "reduce motion" setting is on, `@media (prefers-reduced-motion: reduce)` turns off all animations, transitions, smooth scrolling and the hover lift.
+### 3.1 Visitor name
 
-### 3.3 Responsive layout
+- An unknown visitor sees a small form. A known visitor sees a welcome line and a **Not you?** button. `renderVisitor()` shows one and hides the other.
+- The name is trimmed. An empty name is not saved, and the field gets focus again.
+- The text is written with `textContent`, so a name that contains HTML is shown as plain text.
+- The welcome line says "Nice to meet you" right after saving and "Welcome back" on later visits.
+- The contact form's name field is filled with the saved name when it is empty.
 
-The CSS is mobile-first, with one breakpoint at `min-width: 600px`:
+### 3.2 Projects: filter and sort together
 
-| | Below 600 px | 600 px and wider |
+Each card carries its data:
+
+```html
+<article class="card" data-category="web" data-level="advanced" data-date="2026-10-20">
+```
+
+`renderProjects()` runs three steps:
+
+1. **Sort.** `SORTERS` has one compare function per sort option. The cards are sorted and moved in the page in one operation through a `DocumentFragment`. This step is skipped when the order has not changed.
+2. **Filter.** A card is shown only when it matches the category **and** the level **and** the search text.
+3. **Feedback.** The pressed button, both menus, the level message, the "Showing 2 of 4 projects" line, the empty message and the **Reset filters** button are all set from the state. The reset button only appears when a filter is active.
+
+Dates are stored as `YYYY-MM-DD`, so comparing them as text gives the correct date order.
+
+The search waits 200 ms after the last key press before filtering (`debounce`).
+
+### 3.3 GitHub repositories (API)
+
+**Request:** `GET https://api.github.com/users/Aziz-KFUPM/repos?sort=updated&per_page=6`. No key is needed.
+
+`loadRepos()` follows these steps:
+
+1. Read the cache. If a list was saved less than 10 minutes ago, show it and stop.
+2. Otherwise show the spinner and call `fetchRepos()`.
+3. `fetchRepos()` cancels the request after 8 seconds with an `AbortController`.
+4. On success, save a small copy of the list in the cache and show it.
+5. On failure, show a message and the **Try again** button.
+
+| Situation | What the visitor sees |
+|---|---|
+| Loading | A spinner and "Loading repositories..." |
+| Success | Up to six repositories: name, description, language, stars, last update |
+| No repositories | "No public repositories yet. Check back soon!" |
+| HTTP 403 or 429 | "GitHub's request limit was reached. Wait a few minutes, then click Try again." |
+| No answer in 8 seconds | "GitHub took too long to answer, then click Try again." |
+| Other HTTP error | "GitHub couldn't answer right now, then click Try again." |
+| No connection | "Couldn't load repositories right now. Check your internet connection, then click Try again." |
+
+Failed answers are never cached. All text from the API is inserted with `textContent`, so it cannot run as HTML.
+
+### 3.4 Contact form
+
+`getError(field)` checks one field and returns the first rule that fails:
+
+| Order | Rule | Message |
 |---|---|---|
-| Projects and repos grids | 1 column | 2 columns |
-| `scroll-margin-top` on sections | `7rem` | `0` |
+| 1 | Not empty (all fields) | "This field is required." |
+| 2 | Name has at least 2 characters | "Please enter your name (at least 2 characters)." |
+| 3 | Email matches `text@text.text` with no spaces | "Please enter a valid email, like name@example.com." |
+| 4 | Message has at least 10 characters | "Please write a message of at least 10 characters." |
+| 5 | Message has at most 500 characters | "Please shorten your message to 500 characters or fewer." |
 
-The scroll margin is needed because the sticky header wraps onto 3–4 rows on phones (173 px tall at 320 px wide). Without it, the nav links would scroll section headings underneath the header. This bug existed in Assignment 1 and is fixed here.
+- On submit, every field is checked. If any fails, focus moves to the first invalid field and nothing is submitted.
+- A field that is marked invalid is checked again on every key press, so its error disappears as soon as it is fixed.
+- A counter under the message shows its length ("42 / 500") and turns red past the limit.
+- There is no backend. A valid form shows a success message and is cleared.
 
-## 4. Accessibility
+### 3.5 Time-on-site counter
 
-- Every input has a `<label>`. Field errors are linked with `aria-describedby` and flagged with `aria-invalid`.
-- Status messages for the repositories and the form use `role="status"`, so screen readers announce them.
-- Filter buttons use `aria-pressed`, and the button group has an `aria-label`.
-- `:focus-visible` outlines show keyboard users where they are, without adding outlines on mouse clicks.
-- Images have `alt` text, the page has `lang="en"`, and the colors meet WCAG AA (section 3.1).
-- Reduced motion is respected (section 3.2).
+- `setInterval` runs once per second. It adds a second only when `document.hidden` is false, so time in a background tab is not counted.
+- `formatDuration()` picks the format by size: "42 seconds", "2 min 05 s", "1 h 02 min".
 
-## 5. Performance
+### 3.6 Theme
 
-- **No libraries or frameworks.** The only request after page load is the GitHub API call.
-- **Images:** SVGs with `width`/`height` attributes, so nothing jumps while they load (layout shift = 0), plus `loading="lazy"`.
-- **API:** limited to 6 repositories.
-- **Search:** runs on every keystroke without a delay. That is fine for a few cards. For hundreds of projects, a short debounce would be better.
+`state.theme` starts as `null`, which means "follow the operating system". The first click on the button stores `"dark"` or `"light"`.
 
-**Lighthouse 12.2.1 results** (local server, 2026-10-25):
+## 4. Performance
 
-| Preset | Performance | Accessibility | Best Practices | SEO | First Contentful Paint | Largest Contentful Paint | Layout Shift | Blocking Time |
-|---|---|---|---|---|---|---|---|---|
-| Mobile | 100 | 100 | 100 | 100 | 0.9 s | 1.0 s | 0 | 0 ms |
-| Desktop | 100 | 100 | 100 | 100 | 0.2 s | 0.3 s | 0 | 0 ms |
+| Step | Effect |
+|---|---|
+| Repository list cached for 10 minutes in `sessionStorage` | Reloads make no API request. Measured: 5 page loads, 1 request |
+| Only six fields per repository are cached | The cache is a small part of GitHub's full answer |
+| Request timeout of 8 seconds | The spinner cannot stay forever |
+| Search is debounced by 200 ms | Filtering runs once per pause, not once per key |
+| Cards are re-ordered only when the sort changes | No needless page updates or animation replays |
+| `DocumentFragment` for cards and repositories | The page is updated once, not once per item |
+| The timer pauses in background tabs | No work while nobody is looking |
+| `defer` on the script | The page is not blocked while the script downloads |
+| Images are SVG, about 250 bytes each, with `width`, `height` and `loading="lazy"` | Almost no image weight, and no layout shift |
+| No libraries or web fonts | The whole site is about 35 KB before compression |
+| The Assignment 2 theme code was replaced by the shared state store | No duplicate storage code |
+
+Lighthouse has not been run on this version yet. To run it: open the site in Chrome, open DevTools, choose the **Lighthouse** tab, and click **Analyze page load**.
+
+## 5. Accessibility
+
+- The level message, project count, welcome line, repository status and form status use `role="status"` or sit beside a control, so screen readers announce changes.
+- Filter buttons use `aria-pressed`. Invalid fields use `aria-invalid` and `aria-describedby`.
+- Every control has a label and a visible focus outline.
+- All animations stop when the operating system asks for reduced motion.
+- The new elements reuse the existing color variables. Their contrast was checked in Assignment 2 (4.5:1 or more in both themes).
 
 ## 6. Browser compatibility
 
-| Feature | Used for | Fallback |
-|---|---|---|
-| `fetch` + `async/await` | GitHub API | Error message and Try again button |
-| `IntersectionObserver` | Scroll fade-in | Feature check: content just shows |
-| `localStorage` | Saving the theme | `try/catch`: the theme works but is not remembered |
-| `matchMedia` | OS dark mode | – |
-| `:focus-visible` | Keyboard outlines | Browser's default focus outline |
-| CSS variables, Grid, Flexbox | Theme and layout | – |
+Every JavaScript and CSS feature used is supported by current Chrome, Edge, Firefox and Safari. The newest ones are `AbortController`, `String.padStart` and `async`/`await`, all available since 2019 or earlier.
 
-All of these work in current Chrome, Edge, Firefox and Safari, on desktop and mobile. The newest one is `:focus-visible`, which needs Safari 15.4 (2022) or later. Older browsers ignore that rule and show their default outline.
+| Checked | How |
+|---|---|
+| Chrome (desktop, 1280 px) | Automated checks and screenshots |
+| Chrome (phone size, 320 and 375 px) | Automated check for horizontal scrolling, and screenshots |
+| Safari, Firefox | Not yet tested |
 
 ## 7. Testing
 
-### 7.1 Automated checks during development
+The checks run in headless Chrome through Puppeteer. The GitHub API is replaced by fake answers, so every failure can be produced on demand. The scripts are in the AI evidence ZIP, not in this repository.
 
-The checks used headless Chrome driven by Puppeteer. The test scripts are kept outside this repository and are included in the AI evidence as artifact A03.
+**Result: 56 of 56 checks pass.**
 
-- **Filter and search:**
-  - each category
-  - search combined with a filter
-  - case-insensitive matching and trimming
-  - searching by tag
-  - empty state shown and hidden
-  - `aria-pressed` updates
-- **GitHub API** (responses simulated):
-  - loading indicator
-  - success
-  - HTML in a description shown as plain text
-  - empty list
-  - 403 rate limit
-  - 500 server error
-  - offline
-  - Try again after a failure
-  - one run against the real API
-- **Form:**
-  - empty submit (three messages, focus on Name)
-  - a name made only of spaces
-  - bad email and short message (focus on Email)
-  - live clearing of an error
-  - no errors while typing before the first submit
-  - success and reset
-  - the slide-in animation replaying on repeated submits
-- **Theme and polish:**
-  - follows OS dark/light
-  - the saved choice beats the OS setting after reload
-  - works with `localStorage` blocked
-  - scroll fade-in
-  - 6 px hover lift
-  - reduced motion turns animations off
-  - no console errors and no 404s
-- **Layout:**
-  - no horizontal scrolling at 375 and 1280 px in both themes
-  - nav links keep headings visible at 320, 375, 599, 600, 768 and 1280 px
+| Area | What is checked |
+|---|---|
+| Visitor name | Form on first visit, empty name refused, name trimmed, both welcome texts, reload, **Not you?**, contact form filled in |
+| Theme | Toggle, button label, remembered after reload |
+| Projects | All three sort orders, category, category + level, both level messages, count, empty message, reset button, choices remembered after reload |
+| API | Success, missing description/language/stars, HTML in API text, cache (1 request for 5 loads), 403, 500, offline, **Try again**, timeout, empty list, failures not cached |
+| Contact form | Every rule, focus on the first invalid field, live re-check, counter, success, reset |
+| Timer | Counts up, all three formats |
+| Robustness | Storage blocked, invalid saved values, no console errors, no horizontal scroll at 320 px |
 
-### 7.2 Manual checklist
+**Not tested:** the live GitHub API (the automated checks use fake answers), Safari and Firefox, and Lighthouse.
 
-| Check | Chrome | Safari | Firefox | Phone |
-|---|---|---|---|---|
-| Filter buttons and search; "No projects found" | ✅ | ☐ | ☐ | ☐ |
-| GitHub list loads; offline shows error + Try again | ✅ | ☐ | ☐ | ☐ |
-| Form errors, focus, success message | ✅ | ☐ | ☐ | ☐ |
-| Theme toggle remembered after reload | ✅ | ☐ | ☐ | ☐ |
-| Sections fade in; cards lift on hover | ✅ | ☐ | ☐ | ☐ |
-| Keyboard only: Tab through links, buttons, form | ☐ | ☐ | ☐ | – |
+## 8. Known limits
 
-To test offline in Chrome: DevTools → Network → **Offline**, then reload.
-
-## 8. Known limitations and next steps
-
-- The contact form has no backend, so messages are not actually sent.
-- The project cards are still placeholders.
-- The GitHub list depends on the unauthenticated rate limit (60 requests per hour per IP).
-- When the site moves to React in a later assignment, each feature maps cleanly to a component:
-  - the filter and search become a `ProjectList` with state for the filter and query
-  - the GitHub list becomes a `RepoList` that fetches inside `useEffect`
-  - the form becomes a `ContactForm` with controlled inputs
+- The four projects are placeholders with example dates and levels.
+- The contact form does not send anything.
+- The visitor name is stored only in the visitor's own browser. It is a greeting, not a login.
+- GitHub allows 60 requests per hour per visitor without a login. The cache makes this limit hard to reach.

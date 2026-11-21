@@ -1,25 +1,27 @@
-# Abdulaziz Alkhatib – Portfolio (SWE 363, Assignment 2)
+# Abdulaziz Alkhatib – Portfolio (SWE 363, Assignment 3)
 
-A personal portfolio website built with plain HTML, CSS and JavaScript, with no frameworks, libraries or build tools. Assignment 2 builds on [Assignment 1](https://github.com/Aziz-KFUPM/202372090-Abdulaziz-assignment1) by adding interactive features, live data from the GitHub API, animations and clear feedback messages.
-
+A personal portfolio website built with plain HTML, CSS and JavaScript, with no frameworks, libraries or build tools. Assignment 3 builds on [Assignment 2](https://github.com/Aziz-KFUPM/202372090-AbdulazizAlkhatib-assignment-2) by adding state that the site remembers, project filtering and sorting that work together, a faster and more careful GitHub API integration, stricter form checks and a visit timer.
 
 ## Features
 
-### New in Assignment 2
+### New in Assignment 3
 
-| Feature | What you do | What happens |
-|---|---|---|
-| Project filter | Click **All / Web / Design / Tools** | Only the projects in that category are shown |
-| Live search | Type in **Search projects** | Projects filter while you type. If nothing matches: "No projects found" |
-| GitHub repositories | Open the page | Your latest public repositories load from the GitHub API. A spinner shows while loading. If loading fails, a friendly message and a **Try again** button appear |
-| Contact form feedback | Click **Send** | Each invalid field shows its own message and a red border, and the cursor jumps to the first problem. A success message slides in when everything is valid |
-| Animations | Scroll and hover | Sections fade in, project cards lift on hover, and theme colors fade smoothly |
-| Accessibility | Keyboard or "reduce motion" setting | Visible focus outlines, screen-reader labels for errors and status messages, and no animations when the operating system asks for reduced motion |
+| Area | Feature | What you do | What happens |
+|---|---|---|---|
+| State | Visitor name | Type your name under the introduction and click **Save** | The site greets you by name, remembers you on your next visit, and fills in the contact form's name for you. **Not you?** forgets the name |
+| State | Remembered choices | Pick a theme, a project category, a level or a sort order | The same choices are still selected when you come back |
+| Complex logic | Filter and sort together | Combine **search**, **category**, **Your level** and **Sort by** | Only the projects that match every choice are shown, in the order you picked. A line says how many are showing, and **Reset filters** appears when something is filtered |
+| Complex logic | Level message | Choose **Beginner** or **Advanced** | A short message for that level appears above the matching projects |
+| Complex logic | Contact form rules | Click **Send** | Each field is checked step by step: not empty, valid format, long enough, not too long. A live counter shows the message length |
+| Complex logic | Visit timer | Stay on the page | The footer shows how long you have been here. It pauses while the tab is in the background |
+| API | GitHub repositories | Open the page | The latest public repositories load from the GitHub API, now with star counts. Each kind of failure (request limit, slow answer, GitHub problem, no connection) shows its own message and a **Try again** button |
+| Performance | Caching | Reload the page | The repository list is reused for 10 minutes instead of being downloaded again |
 
-### From Assignment 1 (kept and improved)
+### From Assignments 1 and 2
 
 - A greeting that changes with the time of day
-- A dark/light theme saved in `localStorage`. It now follows the operating system setting until you pick one
+- A dark/light theme that follows the operating system until you pick one
+- Sections that fade in on scroll, cards that lift on hover, and no motion when the operating system asks for reduced motion
 - A responsive, mobile-first layout using Flexbox and Grid
 
 ## Run it locally
@@ -28,8 +30,8 @@ You only need a modern browser. Python is only needed for option B.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Aziz-KFUPM/202372090-AbdulazizAlkhatib-assignment-2.git
-   cd 202372090-AbdulazizAlkhatib-assignment-2
+   git clone https://github.com/Aziz-KFUPM/202372090-AbdulazizAlkhatib-assignment-3.git
+   cd 202372090-AbdulazizAlkhatib-assignment-3
    ```
 2. Open the site in one of two ways:
    - **Option A:** double-click `index.html`.
@@ -40,32 +42,35 @@ You only need a modern browser. Python is only needed for option B.
      The VS Code **Live Server** extension also works.
 3. The **Latest on GitHub** section needs an internet connection. Without one, it shows an error message and a **Try again** button, and the rest of the page still works.
 
+There is nothing to install and nothing to build.
+
 ## How to use the site
 
-- **Projects:** type in the search box or click a category button. Click **All** and clear the search box to see everything again.
+- **Your name:** type it under the introduction and click **Save**. Click **Not you?** to remove it.
+- **Projects:** type in the search box, click a category, choose a level, and choose a sort order. They all apply at the same time. Click **Reset filters** to see every project again.
 - **Latest on GitHub:** loads by itself. If you see an error, wait a moment and click **Try again**.
-- **Contact:** the form does not send email, because there is no backend. It checks your input and confirms when everything is valid.
-- **Theme:** the button in the top-right corner switches between dark and light, and your choice is remembered.
+- **Contact:** the form does not send email, because there is no backend. It checks your input and confirms when everything is valid. Messages can be 10 to 500 characters long.
+- **Theme:** the button in the top-right corner switches between dark and light.
+
+**What the site remembers:** your name, theme, project category, level and sort order are saved in your own browser (`localStorage`). Nothing is sent to a server. To start fresh, click **Not you?** and **Reset filters**, or clear the site data in your browser settings.
 
 ## Project structure
 
 ```
 ├── index.html                       Page structure
 ├── css/styles.css                   Theme colors, layout, animations, responsive rules
-├── js/script.js                     All interactivity
+├── js/script.js                     All interactivity, in eight numbered sections
 ├── assets/images/                   Project placeholders and favicon (SVG)
 ├── docs/
 │   ├── ai-usage-report.md           AI tools, usage log and declaration
-│   └── technical-documentation.md   How each feature works, testing, compatibility
+│   └── technical-documentation.md   How each feature works, state, performance, testing
 └── README.md
 ```
 
 ## Quality checks
 
-- **Lighthouse** (mobile and desktop): Performance 100, Accessibility 100, Best Practices 100, SEO 100.
-- **Contrast:** every text color meets WCAG AA (4.5:1 or more) in both themes.
-- **Tested in** Chrome at 320, 375, 600, 768 and 1280 px wide.
-- **Not yet tested:** Safari and Firefox (manual check still to do).
+- **Automated browser checks:** 56 checks in headless Chrome cover every new feature, every API failure, blocked storage and a 320 px wide phone screen. All pass.
+- **Not yet done:** a Lighthouse run for this version, and manual checks in Safari and Firefox.
 
 Details are in [docs/technical-documentation.md](docs/technical-documentation.md).
 
@@ -73,18 +78,18 @@ Details are in [docs/technical-documentation.md](docs/technical-documentation.md
 
 1. On GitHub, open **Settings → Pages**.
 2. Under **Source**, choose **Deploy from a branch**, then branch `main` and folder `/ (root)`, and save.
-3. After about a minute, the site is live at `https://aziz-kfupm.github.io/202372090-AbdulazizAlkhatib-assignment-2/`.
+3. After about a minute, the site is live at `https://aziz-kfupm.github.io/202372090-AbdulazizAlkhatib-assignment-3/`.
 
 ## AI use
 
-I used **Claude Code (Claude Opus 5.5)** for:
+I used **Claude Code (Claude Fable 5.2)** to:
 
-- planning the features
-- generating a first version of the code, one feature at a time
-- testing it in a headless browser
-- drafting this documentation
+- plan and generate the Assignment 3 features, one commit per feature
+- test them in a headless browser
+- explain the state management and design choices to me
+- draft this documentation
 
-I reviewed, tested and edited the result. Commits that contain AI-assisted code say so with an `Assisted-by:` line. The full usage log and declaration are in [docs/ai-usage-report.md](docs/ai-usage-report.md).
+Commits that contain AI-assisted code say so with an `Assisted-by:` line. The full usage log and declaration are in [docs/ai-usage-report.md](docs/ai-usage-report.md).
 
 ## Author
 
