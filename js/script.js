@@ -80,6 +80,7 @@ function render() {
   renderTheme();
   renderVisitor();
   renderProjects();
+  prefillContactName();
 }
 
 // ---------------------------------------------------------------------------
@@ -414,21 +415,35 @@ async function loadRepos() {
 
 reposRetry.addEventListener("click", loadRepos);
 
-// Contact form validation (no backend)
+// ---------------------------------------------------------------------------
+// 6. Contact form validation (no backend)
+// ---------------------------------------------------------------------------
 const form = document.getElementById("contact-form");
 const formStatus = document.getElementById("form-status");
+const messageCount = document.getElementById("message-count");
+const MESSAGE_MIN = 10;
+const MESSAGE_MAX = 500;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Return the error message for one field, or "" if its value is fine
+// Return the error message for one field, or "" if its value is fine.
+// The checks run in order, so the visitor sees the first rule that fails.
 function getError(field) {
   const value = field.value.trim();
+
+  if (value === "") {
+    return "This field is required.";
+  }
   if (field.name === "name" && value.length < 2) {
     return "Please enter your name (at least 2 characters).";
   }
-  if (field.name === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+  if (field.name === "email" && !EMAIL_PATTERN.test(value)) {
     return "Please enter a valid email, like name@example.com.";
   }
-  if (field.name === "message" && value.length < 10) {
-    return "Please write a message of at least 10 characters.";
+  if (field.name === "message" && value.length < MESSAGE_MIN) {
+    return "Please write a message of at least " + MESSAGE_MIN + " characters.";
+  }
+  if (field.name === "message" && value.length > MESSAGE_MAX) {
+    return "Please shorten your message to " + MESSAGE_MAX + " characters or fewer.";
   }
   return "";
 }
@@ -444,6 +459,13 @@ function showFormStatus(text, type) {
   formStatus.className = "";
   void formStatus.offsetWidth; // forces a reflow so the slide-in animation plays again
   formStatus.className = type;
+}
+
+// Live character counter under the message box; turns red past the limit
+function updateMessageCount() {
+  const length = form.elements.message.value.trim().length;
+  messageCount.textContent = length + " / " + MESSAGE_MAX;
+  messageCount.classList.toggle("over", length > MESSAGE_MAX);
 }
 
 form.addEventListener("submit", function (event) {
@@ -466,15 +488,63 @@ form.addEventListener("submit", function (event) {
 
   showFormStatus("Thanks, " + form.elements.name.value.trim() + "! Your message was received.", "success");
   form.reset();
+  updateMessageCount();
+  prefillContactName();
 });
 
-// While typing, update the error of a field that is already marked invalid
 form.addEventListener("input", function (event) {
+  // While typing, update the error of a field that is already marked invalid
   if (event.target.getAttribute("aria-invalid") === "true") {
     showError(event.target, getError(event.target));
   }
+  if (event.target === form.elements.message) {
+    updateMessageCount();
+  }
 });
 
+// A visitor who already told the site their name doesn't have to type it again
+function prefillContactName() {
+  if (form.elements.name.value === "" && state.visitorName !== "") {
+    form.elements.name.value = state.visitorName;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 7. Time-on-site counter
+// ---------------------------------------------------------------------------
+const visitTimer = document.getElementById("visit-timer");
+let secondsOnSite = 0;
+
+// 42 -> "42 seconds", 125 -> "2 min 05 s", 3725 -> "1 h 02 min"
+function formatDuration(totalSeconds) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return hours + " h " + String(minutes).padStart(2, "0") + " min";
+  }
+  if (minutes > 0) {
+    return minutes + " min " + String(seconds).padStart(2, "0") + " s";
+  }
+  return seconds + (seconds === 1 ? " second" : " seconds");
+}
+
+function renderTimer() {
+  visitTimer.textContent = "You have been here for " + formatDuration(secondsOnSite) + ".";
+}
+
+// Count only while the tab is actually on screen
+setInterval(function () {
+  if (!document.hidden) {
+    secondsOnSite++;
+    renderTimer();
+  }
+}, 1000);
+
+// ---------------------------------------------------------------------------
+// 8. Scroll animation
+// ---------------------------------------------------------------------------
 // Fade sections in as they scroll into view (older browsers just show them)
 if ("IntersectionObserver" in window) {
   const observer = new IntersectionObserver(function (entries) {
@@ -498,4 +568,6 @@ if ("IntersectionObserver" in window) {
 loadSavedState();
 checkSavedChoices();
 render();
+updateMessageCount();
+renderTimer();
 loadRepos();

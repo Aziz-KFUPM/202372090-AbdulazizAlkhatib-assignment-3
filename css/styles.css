@@ -401,6 +401,14 @@ form button {
   color: var(--error);
 }
 
+.char-count {
+  color: var(--muted);
+}
+
+.char-count.over {
+  color: var(--error);
+}
+
 input[aria-invalid="true"],
 textarea[aria-invalid="true"] {
   border-color: var(--error);
@@ -432,6 +440,15 @@ textarea[aria-invalid="true"] {
   padding: 1.5rem 1rem;
   border-top: 1px solid var(--border);
   color: var(--muted);
+}
+
+.site-footer p {
+  margin: 0.25rem 0;
+}
+
+/* Fixed-width digits stop the timer text from shaking as it counts */
+#visit-timer {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Tablet and up */

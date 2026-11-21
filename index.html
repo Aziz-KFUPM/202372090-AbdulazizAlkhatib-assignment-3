@@ -150,7 +150,8 @@
         <small class="field-error" id="email-error"></small>
 
         <label for="message">Message</label>
-        <textarea id="message" name="message" rows="5" required aria-describedby="message-error"></textarea>
+        <textarea id="message" name="message" rows="5" required aria-describedby="message-count message-error"></textarea>
+        <small id="message-count" class="char-count"></small>
         <small class="field-error" id="message-error"></small>
 
         <button type="submit">Send</button>
@@ -161,8 +162,9 @@
 
   <footer class="site-footer">
     <p>&copy; 2026 Abdulaziz. All rights reserved.</p>
+    <p id="visit-timer"></p>
   </footer>
 
-  <script src="js/script.js"></script>
+  <script src="js/script.js" defer></script>
 </body>
 </html>
